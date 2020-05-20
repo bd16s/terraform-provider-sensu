@@ -56,7 +56,13 @@ func resourceFilterCreate(d *schema.ResourceData, meta interface{}) error {
 
 	expressions := expandStringList(d.Get("expressions").([]interface{}))
 	runtimeAssets := expandStringList(d.Get("runtime_assets").([]interface{}))
-	when := expandTimeWindows(d.Get("when").(*schema.Set).List())
+	// to prevent the creation of an empty when block
+	whenRaw, whenExist := d.GetOk("when")
+	expandedTimeWindows := expandTimeWindows(whenRaw.(*schema.Set).List())
+	when := &expandedTimeWindows
+	if !whenExist {
+		when = nil
+	}
 
 	filter := &types.EventFilter{
 		ObjectMeta: types.ObjectMeta{
@@ -66,7 +72,7 @@ func resourceFilterCreate(d *schema.ResourceData, meta interface{}) error {
 		Action:        d.Get("action").(string),
 		Expressions:   expressions,
 		RuntimeAssets: runtimeAssets,
-		When:          &when,
+		When:          when,
 	}
 
 	log.Printf("[DEBUG] Creating filter %s: %#v", name, filter)
